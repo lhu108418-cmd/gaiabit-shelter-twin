@@ -1,0 +1,17 @@
+{
+  "app": "GaiaBit Shelter Twin",
+  "version": "1.0.0",
+  "mode": "demo",
+  "supabase": {"url": "", "publishableKey": ""},
+  "facility": {"name": "毛焦點示範收容園區", "width": 90, "depth": 66, "animalCapacity": 180, "staffOnDuty": 8, "animals": {"dogs": 82, "cats": 47}, "devices": {"cameras": 16, "feeders": 8, "sensors": 10}, "zones": [
+    {"id":"DOG-A","name":"犬舍 A 區","kind":"dog","x":-25,"z":-14,"width":23,"depth":16,"count":30,"capacity":40},
+    {"id":"DOG-B","name":"犬舍 B 區","kind":"dog","x":1,"z":-14,"width":23,"depth":16,"count":32,"capacity":40},
+    {"id":"DOG-C","name":"犬舍 C 區","kind":"dog","x":27,"z":-14,"width":23,"depth":16,"count":20,"capacity":32},
+    {"id":"CAT-A","name":"貓舍 A 區","kind":"cat","x":-24,"z":14,"width":23,"depth":15,"count":26,"capacity":34},
+    {"id":"CAT-B","name":"貓舍 B 區","kind":"cat","x":2,"z":14,"width":23,"depth":15,"count":21,"capacity":34},
+    {"id":"MED","name":"醫療隔離區","kind":"medical","x":29,"z":14,"width":19,"depth":15,"count":0,"capacity":20},
+    {"id":"ADMIN","name":"行政／接待","kind":"admin","x":-29,"z":-30,"width":18,"depth":8,"count":0,"capacity":0},
+    {"id":"STORAGE","name":"設備／物資","kind":"storage","x":27,"z":-31,"width":18,"depth":8,"count":0,"capacity":0}
+  ]},
+  "assumptions": {"baselineAlertMinutes": 54, "afterAlertMinutes": 17, "baselineWalkKm": 4.3, "afterWalkKm": 3.2, "baselineEngagement": 1200, "afterEngagement": 2880, "baselineManualHours": 7.5, "afterManualHours": 5.6}
+}
