@@ -78,3 +78,8 @@ New Project → Import GitHub Repository → Framework Preset **Other** → Depl
 ## 使用限制與資料保護
 
 此程式為前端可操作原型，**不是**已驗證的智慧收容所正式管理系統，不能用作醫療診斷、實際人力裁撤或防疫規則替代品。展示資料均為合成示範，請勿匯入真實個資、醫療紀錄、私密圖面或監視影像。模型比例、動線、AI 誤報與經濟效益在現場實測之前不能視為真實成果。
+
+
+## SQL 版本更新（2026-10-29）
+
+如先前執行過使用 `twin_*` 與 `facility_id` 的舊版資料庫，請改用本包的 `schema.sql`。新版改用 `stwin_*` 資料表（例如 `stwin_shelters`、`stwin_zones`），避免 `shelter_id` 欄位與舊結構衝突；不會刪除或更改舊版資料表。重新執行新版 SQL 不會因重複 policy 名稱而失敗。注意：HTML 目前仍以本機展示資料操作，尚未連接 Supabase。
