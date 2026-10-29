@@ -1,66 +1,134 @@
--- GaiaBit Shelter Twin | PostgreSQL / Supabase
--- 建立後預設沒有對匿名訪客開放資料；必須先設定適當身分與權限。
+-- GaiaBit Shelter Twin | PostgreSQL / Supabase | schema v1
+-- Execute in a NEW dedicated Supabase project. Does not modify existing project tables.
+-- The static HTML remains a local demonstration until explicitly configured.
 create extension if not exists pgcrypto;
-create table if not exists public.twin_facilities (
+
+create table if not exists public.twin_shelters (
  id uuid primary key default gen_random_uuid(), owner_id uuid not null references auth.users(id) on delete cascade,
- name text not null, width_m numeric(10,2) not null default 90, depth_m numeric(10,2) not null default 66,
- config jsonb not null default '{}'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+ name text not null, code text not null, address text, width_m numeric(10,2) not null default 48,
+ depth_m numeric(10,2) not null default 32, model_level text not null default 'L1',
+ status text not null default 'draft' check(status in ('draft','review','published','archived')),
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+ unique(owner_id,code)
+);
 create table if not exists public.twin_memberships (
- facility_id uuid not null references public.twin_facilities(id) on delete cascade,
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
  user_id uuid not null references auth.users(id) on delete cascade,
- role text not null check (role in ('admin','operator','viewer')) default 'viewer',
- primary key(facility_id,user_id));
+ role text not null check (role in ('admin','manager','editor','analyst','care','viewer')),
+ created_at timestamptz not null default now(), unique(shelter_id,user_id)
+);
 create table if not exists public.twin_zones (
- id uuid primary key default gen_random_uuid(), facility_id uuid not null references public.twin_facilities(id) on delete cascade,
- code text not null, name text not null, category text not null, pos_x numeric not null, pos_z numeric not null,
- size_x numeric not null, size_z numeric not null, capacity integer not null default 0 check(capacity>=0),
- occupancy integer not null default 0 check(occupancy>=0), extra jsonb not null default '{}'::jsonb,
- unique(facility_id,code));
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ name text not null, type text not null, x numeric not null, y numeric not null,
+ w numeric not null check(w>0), h numeric not null check(h>0), capacity integer not null default 0 check(capacity>=0),
+ animal_count integer not null default 0 check(animal_count>=0), metadata jsonb not null default '{}',
+ created_at timestamptz not null default now()
+);
 create table if not exists public.twin_devices (
- id uuid primary key default gen_random_uuid(), facility_id uuid not null references public.twin_facilities(id) on delete cascade,
- zone_id uuid references public.twin_zones(id) on delete set null, label text not null, device_type text not null,
- status text not null default 'offline', pos_x numeric, pos_z numeric, last_seen timestamptz, metadata jsonb not null default '{}'::jsonb);
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ zone_id uuid references public.twin_zones(id) on delete set null, code text not null, type text not null,
+ status text not null default 'unknown', x numeric, y numeric, height_m numeric,
+ fov_deg numeric, effective_range_m numeric, metadata jsonb not null default '{}',
+ created_at timestamptz not null default now(), unique(shelter_id,code)
+);
 create table if not exists public.twin_animals (
- id uuid primary key default gen_random_uuid(), facility_id uuid not null references public.twin_facilities(id) on delete cascade,
- zone_id uuid references public.twin_zones(id) on delete set null, animal_code text not null, species text not null check(species in ('dog','cat','other')),
- state text not null default 'in_care', arrived_at date, health_status text, notes text,
- unique(facility_id,animal_code));
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ zone_id uuid references public.twin_zones(id) on delete set null,
+ animal_code text not null, species text not null check(species in ('dog','cat','other')),
+ display_name text, health_status text, admission_date date, status text not null default 'in-shelter',
+ metadata jsonb not null default '{}', created_at timestamptz not null default now(), unique(shelter_id,animal_code)
+);
 create table if not exists public.twin_staff_shifts (
- id uuid primary key default gen_random_uuid(), facility_id uuid not null references public.twin_facilities(id) on delete cascade,
- staff_alias text not null, start_at timestamptz not null, end_at timestamptz not null,
- workload_minutes integer not null default 0, walking_meters numeric not null default 0);
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ assigned_user_id uuid references auth.users(id) on delete set null, display_label text not null, staff_role text not null,
+ starts_at timestamptz, ends_at timestamptz, zone_id uuid references public.twin_zones(id) on delete set null,
+ metadata jsonb not null default '{}', created_at timestamptz not null default now()
+);
+create table if not exists public.twin_tasks (
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ zone_id uuid references public.twin_zones(id) on delete set null,
+ name text not null, kind text not null, priority text not null default 'normal', status text not null default 'pending',
+ planned_at timestamptz, minutes integer check(minutes>=0), assigned_shift_id uuid references public.twin_staff_shifts(id) on delete set null,
+ metadata jsonb not null default '{}', created_at timestamptz not null default now()
+);
 create table if not exists public.twin_events (
- id bigint generated always as identity primary key, facility_id uuid not null references public.twin_facilities(id) on delete cascade,
- zone_id uuid references public.twin_zones(id) on delete set null, occurred_at timestamptz not null default now(),
- event_type text not null, severity text not null default 'info', source text not null default 'system',
- detail jsonb not null default '{}'::jsonb);
-create index if not exists twin_events_facility_time_idx on public.twin_events(facility_id,occurred_at desc);
-create table if not exists public.twin_daily_metrics (
- facility_id uuid not null references public.twin_facilities(id) on delete cascade,
- metric_date date not null, metric_key text not null, metric_value numeric not null, unit text not null,
- source text not null default 'manual', primary key (facility_id,metric_date,metric_key));
-create table if not exists public.twin_simulations (
- id uuid primary key default gen_random_uuid(), facility_id uuid not null references public.twin_facilities(id) on delete cascade,
- created_by uuid not null references auth.users(id), label text not null,
- inputs jsonb not null default '{}'::jsonb, outputs jsonb not null default '{}'::jsonb,
- created_at timestamptz not null default now());
--- 隔離權限，預設只讓設施持有人及其明確授權成員存取
-alter table public.twin_facilities enable row level security;
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ event_at timestamptz not null default now(), type text not null, severity text not null default 'info',
+ message text not null, review_status text not null default 'unreviewed', source_kind text not null default 'manual',
+ metadata jsonb not null default '{}'
+);
+create table if not exists public.twin_scenarios (
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ name text not null, status text not null default 'draft', model_version text not null default 'prototype-v1',
+ seed bigint not null default 20261029, parameters jsonb not null default '{}',
+ created_by uuid references auth.users(id) on delete set null, created_at timestamptz not null default now()
+);
+create table if not exists public.twin_simulation_runs (
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ scenario_id uuid not null references public.twin_scenarios(id) on delete cascade,
+ created_by uuid references auth.users(id) on delete set null, model_version text not null,
+ seed bigint not null, input_snapshot jsonb not null default '{}', output_summary jsonb not null default '{}',
+ result_class text not null default 'estimate', run_status text not null default 'completed',
+ created_at timestamptz not null default now()
+);
+create table if not exists public.twin_model_versions (
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ version_label text not null, state text not null default 'draft', scene_snapshot jsonb not null default '{}',
+ notes text, created_by uuid references auth.users(id) on delete set null,
+ created_at timestamptz not null default now(), unique(shelter_id,version_label)
+);
+create table if not exists public.twin_audit_logs (
+ id uuid primary key default gen_random_uuid(), shelter_id uuid not null references public.twin_shelters(id) on delete cascade,
+ actor_id uuid references auth.users(id) on delete set null, operation text not null,
+ entity_type text not null, entity_id text, details jsonb not null default '{}', created_at timestamptz not null default now()
+);
+create index if not exists idx_twin_members_user on public.twin_memberships(user_id,shelter_id);
+create index if not exists idx_twin_zones_shelter on public.twin_zones(shelter_id);
+create index if not exists idx_twin_devices_shelter on public.twin_devices(shelter_id);
+create index if not exists idx_twin_animals_shelter on public.twin_animals(shelter_id);
+create index if not exists idx_twin_events_shelter_time on public.twin_events(shelter_id,event_at desc);
+create index if not exists idx_twin_runs_shelter on public.twin_simulation_runs(shelter_id,created_at desc);
+
+-- Read requires ownership or membership. Writes: owner only in first deployment (safe default).
+create or replace function public.twin_has_access(p_shelter uuid)
+returns boolean language sql stable security invoker set search_path = '' as $$
+ select exists(select 1 from public.twin_shelters s where s.id=p_shelter and s.owner_id=(select auth.uid()));
+$$;
+-- Do not grant broad SELECT over memberships: only own memberships visible.
+-- Membership-based read can be added using audited, carefully reviewed role policies later.
+revoke all on function public.twin_has_access(uuid) from public, anon;
+grant execute on function public.twin_has_access(uuid) to authenticated;
+
+alter table public.twin_shelters enable row level security;
 alter table public.twin_memberships enable row level security;
 alter table public.twin_zones enable row level security;
 alter table public.twin_devices enable row level security;
 alter table public.twin_animals enable row level security;
 alter table public.twin_staff_shifts enable row level security;
+alter table public.twin_tasks enable row level security;
 alter table public.twin_events enable row level security;
-alter table public.twin_daily_metrics enable row level security;
-alter table public.twin_simulations enable row level security;
--- 保持權限簡單且安全：目前只有 owner 可透過 Data API 操作其場域，日後再擴展成員權限。
-create policy twin_facility_owner_all on public.twin_facilities for all to authenticated using(owner_id=(select auth.uid())) with check(owner_id=(select auth.uid()));
-create policy twin_membership_owner_all on public.twin_memberships for all to authenticated using(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid()))) with check(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid())));
-create policy twin_zone_owner_all on public.twin_zones for all to authenticated using(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid()))) with check(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid())));
-create policy twin_device_owner_all on public.twin_devices for all to authenticated using(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid()))) with check(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid())));
-create policy twin_animal_owner_all on public.twin_animals for all to authenticated using(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid()))) with check(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid())));
-create policy twin_shift_owner_all on public.twin_staff_shifts for all to authenticated using(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid()))) with check(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid())));
-create policy twin_event_owner_all on public.twin_events for all to authenticated using(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid()))) with check(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid())));
-create policy twin_metrics_owner_all on public.twin_daily_metrics for all to authenticated using(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid()))) with check(exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid())));
-create policy twin_sim_owner_all on public.twin_simulations for all to authenticated using(created_by=(select auth.uid()) and exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid()))) with check(created_by=(select auth.uid()) and exists(select 1 from public.twin_facilities f where f.id=facility_id and f.owner_id=(select auth.uid())));
+alter table public.twin_scenarios enable row level security;
+alter table public.twin_simulation_runs enable row level security;
+alter table public.twin_model_versions enable row level security;
+alter table public.twin_audit_logs enable row level security;
+
+create policy "owner shelter read" on public.twin_shelters for select to authenticated using(owner_id=(select auth.uid()));
+create policy "owner shelter insert" on public.twin_shelters for insert to authenticated with check(owner_id=(select auth.uid()));
+create policy "owner shelter update" on public.twin_shelters for update to authenticated using(owner_id=(select auth.uid())) with check(owner_id=(select auth.uid()));
+create policy "owner shelter delete" on public.twin_shelters for delete to authenticated using(owner_id=(select auth.uid()));
+
+-- Restrict sensitive audit log creation to trusted server-side workflows in a later phase.
+-- The prototype is a local editor and does not claim server-enforced auditing.
+do $$ declare t text; begin
+ foreach t in array array['twin_memberships','twin_zones','twin_devices','twin_animals','twin_staff_shifts','twin_tasks','twin_events','twin_scenarios','twin_simulation_runs','twin_model_versions'] loop
+  execute format('create policy %I on public.%I for select to authenticated using (public.twin_has_access(shelter_id))','owner_read_'||t,t);
+  execute format('create policy %I on public.%I for insert to authenticated with check (public.twin_has_access(shelter_id))','owner_insert_'||t,t);
+  execute format('create policy %I on public.%I for update to authenticated using (public.twin_has_access(shelter_id)) with check (public.twin_has_access(shelter_id))','owner_update_'||t,t);
+  execute format('create policy %I on public.%I for delete to authenticated using (public.twin_has_access(shelter_id))','owner_delete_'||t,t);
+ end loop;
+end $$;
+create policy "owner audit read" on public.twin_audit_logs for select to authenticated using(public.twin_has_access(shelter_id));
+-- No anon rights or public read policies; grant authenticated access subject to RLS.
+revoke all on all tables in schema public from anon;
+grant select,insert,update,delete on public.twin_shelters,public.twin_memberships,public.twin_zones,public.twin_devices,public.twin_animals,public.twin_staff_shifts,public.twin_tasks,public.twin_events,public.twin_scenarios,public.twin_simulation_runs,public.twin_model_versions to authenticated;
+grant select on public.twin_audit_logs to authenticated;

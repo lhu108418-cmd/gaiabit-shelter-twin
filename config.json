@@ -1,17 +1,49 @@
 {
-  "app": "GaiaBit Shelter Twin",
-  "version": "1.0.0",
+  "app": "GaiaBit Shelter Twin Admin",
+  "version": "1.0.0-admin-prototype",
   "mode": "demo",
-  "supabase": {"url": "", "publishableKey": ""},
-  "facility": {"name": "毛焦點示範收容園區", "width": 90, "depth": 66, "animalCapacity": 180, "staffOnDuty": 8, "animals": {"dogs": 82, "cats": 47}, "devices": {"cameras": 16, "feeders": 8, "sensors": 10}, "zones": [
-    {"id":"DOG-A","name":"犬舍 A 區","kind":"dog","x":-25,"z":-14,"width":23,"depth":16,"count":30,"capacity":40},
-    {"id":"DOG-B","name":"犬舍 B 區","kind":"dog","x":1,"z":-14,"width":23,"depth":16,"count":32,"capacity":40},
-    {"id":"DOG-C","name":"犬舍 C 區","kind":"dog","x":27,"z":-14,"width":23,"depth":16,"count":20,"capacity":32},
-    {"id":"CAT-A","name":"貓舍 A 區","kind":"cat","x":-24,"z":14,"width":23,"depth":15,"count":26,"capacity":34},
-    {"id":"CAT-B","name":"貓舍 B 區","kind":"cat","x":2,"z":14,"width":23,"depth":15,"count":21,"capacity":34},
-    {"id":"MED","name":"醫療隔離區","kind":"medical","x":29,"z":14,"width":19,"depth":15,"count":0,"capacity":20},
-    {"id":"ADMIN","name":"行政／接待","kind":"admin","x":-29,"z":-30,"width":18,"depth":8,"count":0,"capacity":0},
-    {"id":"STORAGE","name":"設備／物資","kind":"storage","x":27,"z":-31,"width":18,"depth":8,"count":0,"capacity":0}
-  ]},
-  "assumptions": {"baselineAlertMinutes": 54, "afterAlertMinutes": 17, "baselineWalkKm": 4.3, "afterWalkKm": 3.2, "baselineEngagement": 1200, "afterEngagement": 2880, "baselineManualHours": 7.5, "afterManualHours": 5.6}
+  "description": "示範資料，非實測數據；前後效益係假設演算，須以實場校準。",
+  "theme": {"primary":"#08bac8","dark":"#061e30","secondary":"#e8f7fa"},
+  "shelter": {"id":"demo-shelter","name":"A 區示範收容所","code":"SHT-DEMO-001","address":"示範場域／不代表真實位置","width":48,"depth":32,"area_m2":1536,"model_level":"L1 概念模型","status":"draft"},
+  "zones": [
+    {"id":"z1","name":"犬舍 A","type":"dog","x":3,"y":3,"w":15,"h":10,"capacity":30,"animals":18,"color":"#eac48e"},
+    {"id":"z2","name":"犬舍 B","type":"dog","x":20,"y":3,"w":13,"h":10,"capacity":24,"animals":16,"color":"#eac48e"},
+    {"id":"z3","name":"貓舍","type":"cat","x":35,"y":3,"w":10,"h":10,"capacity":20,"animals":12,"color":"#c9b7f8"},
+    {"id":"z4","name":"醫療與隔離","type":"isolation","x":3,"y":17,"w":12,"h":11,"capacity":12,"animals":5,"color":"#f7b2b3"},
+    {"id":"z5","name":"清潔與倉儲","type":"storage","x":17,"y":17,"w":12,"h":11,"capacity":0,"animals":0,"color":"#a5d1ea"},
+    {"id":"z6","name":"活動及訪客區","type":"activity","x":31,"y":17,"w":14,"h":11,"capacity":12,"animals":6,"color":"#a6d9ad"}
+  ],
+  "devices": [
+    {"id":"cam1","name":"CAM-001","type":"camera","zoneId":"z1","x":9,"y":5,"status":"online","fov":100,"range":12},
+    {"id":"cam2","name":"CAM-002","type":"camera","zoneId":"z2","x":26,"y":5,"status":"online","fov":95,"range":12},
+    {"id":"cam3","name":"CAM-003","type":"camera","zoneId":"z3","x":41,"y":5,"status":"online","fov":100,"range":10},
+    {"id":"env1","name":"ENV-001","type":"sensor","zoneId":"z4","x":9,"y":22,"status":"online","fov":0,"range":0}
+  ],
+  "staff": [
+    {"id":"s1","name":"示範照護員 A","role":"照護員","zoneId":"z1","shift":"08:00–16:00","status":"on-duty"},
+    {"id":"s2","name":"示範照護員 B","role":"照護員","zoneId":"z2","shift":"08:00–16:00","status":"on-duty"},
+    {"id":"s3","name":"示範獸醫助理","role":"醫療支援","zoneId":"z4","shift":"09:00–17:00","status":"on-duty"}
+  ],
+  "animals": [
+    {"id":"DOG-001","name":"示範犬 001","species":"dog","zoneId":"z1","health":"觀察中","status":"in-shelter"},
+    {"id":"CAT-001","name":"示範貓 001","species":"cat","zoneId":"z3","health":"正常","status":"in-shelter"}
+  ],
+  "tasks": [
+    {"id":"t1","name":"犬舍 A 餵食","type":"feeding","zoneId":"z1","staffId":"s1","time":"08:00","minutes":30,"status":"done","priority":"normal"},
+    {"id":"t2","name":"犬舍 B 巡檢","type":"inspection","zoneId":"z2","staffId":"s2","time":"10:00","minutes":25,"status":"running","priority":"normal"},
+    {"id":"t3","name":"隔離區消毒","type":"cleaning","zoneId":"z4","staffId":"s3","time":"14:00","minutes":40,"status":"pending","priority":"high"},
+    {"id":"t4","name":"貓舍補水","type":"feeding","zoneId":"z3","staffId":"s1","time":"15:00","minutes":15,"status":"pending","priority":"normal"}
+  ],
+  "events": [
+    {"id":"e1","time":"09:18","type":"AI 提示","message":"犬舍 A 活動狀態需人工確認","severity":"warning","status":"unreviewed"},
+    {"id":"e2","time":"10:22","type":"設備","message":"CAM-002 已完成模擬連線檢查","severity":"info","status":"resolved"},
+    {"id":"e3","time":"11:05","type":"照護","message":"隔離區任務即將到期","severity":"warning","status":"unreviewed"}
+  ],
+  "scenarios": [
+    {"id":"baseline","name":"維持現況","cameras":4,"staff":3,"ai":false,"routeOptimization":false,"dailyEvents":8,"budget":0,"seed":20261029},
+    {"id":"enhanced","name":"導入毛焦點","cameras":10,"staff":3,"ai":true,"routeOptimization":true,"dailyEvents":8,"budget":200000,"seed":20261029}
+  ],
+  "roles": ["系統管理員","場域管理者","場域編輯","模擬分析","照護資料維護","檢視者","公開展示"],
+  "assumptions": {"manual_discovery_minutes":45,"ai_discovery_minutes":8,"notification_minutes":2,"confirmation_minutes":5,"travel_minutes":8,"processing_minutes":20,"camera_effectiveness":0.65,"staff_available_hours":7,"base_daily_care_hours":18,"max_daily_tasks_per_staff":8},
+  "quality": {"scale_calibrated":false,"manual_reviewed":false,"navigation_validated":false,"real_data_connected":false}
 }

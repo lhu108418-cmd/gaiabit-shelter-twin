@@ -1,54 +1,80 @@
-# GaiaBit Shelter Twin — 收容所數位孿生模擬中心
+# GaiaBit Shelter Twin｜系統管理後台
 
-## 交付檔案（固定四份）
-- `index.html`：單頁網站，含 3D 場域、鏡頭、人員、路線、熱區及情境模擬。
-- `config.json`：示範場域配置、犬貓數量、設備數量和模型假設。
-- `schema.sql`：Supabase PostgreSQL 資料表、索引與 Row Level Security。
-- `README.md`：這份建置／操作說明。
+版本：1.0.0 Admin Prototype（2026-10-29）  
+對照來源：《GaiaBit Shelter Twin 完整系統建置計畫書》（19 頁）與使用者提供的前台／後台 UI/UX 示意圖。
 
-> 注意：這是可操作的**展示原型**。畫面上全部數值及事件均是示範或計算假設，並非真實收容所監測、AI 辨識結果，也不代表實際導入後會達成的效益。3D 使用 Three.js CDN，首次開啟需要網路。當前不需要 Supabase 才能運作。
+## 交付檔案（固定四個）
 
-## 從零部署：1. GitHub → 2. Vercel → 3. Supabase
+1. `index.html`：單頁後台，HTML + CSS + JavaScript，包含 Three.js CDN 3D 場景。
+2. `config.json`：示範場域資料與情境參數（初始資料交換範本）。
+3. `schema.sql`：新建 Supabase 專案的 PostgreSQL 資料表、索引與基礎 RLS。
+4. `README.md`：操作、部署、限制及後續整合指引。
+
+## 立即開始
+
+- 直接雙擊 `index.html`，或上傳 GitHub 後透過 Vercel（Framework Preset: Other）部署；正常載入 3D 需要存取 Three.js CDN。
+- 預設示範場域嵌入 HTML，**不需要**先配置 Supabase 即可操作。`config.json` 是資料範本；網站目前不會在載入時自動 fetch 該檔。
+- 使用「場域與模型」編輯區域名稱、位置、長寬和容量；可拖曳 2D 區塊，切換可旋轉的 3D 概念模型。
+- 在「設備與 AI」「動物與人員」「班表及任務」可修改示範資料。
+- 「情境實驗室」調整攝影機、人力、AI、路線等假設，執行估算；「報告匯出」可下載報告 JSON。
+- 所有本機修改儲存於瀏覽器 `localStorage`，清除網站資料或換瀏覽器即可能消失。請定期從「系統及連線」下載 JSON 備份。
+
+## 依計畫書建置的功能與限制
+
+| 規格 | 本版狀態 |
+| --- | --- |
+| 管理後台總覽、任務、設備、犬貓、版本、風險 | 已有可操作 Demo |
+| 簡易 2D 畫面及區域拖曳 | 已有 |
+| 可旋轉、縮放、即時反映區域的 L1 3D 概念模型 | 已有（需網路） |
+| 本機 CRUD 與 JSON 備份 | 已有（僅部分資料型別） |
+| 固定基準公式的情境估算／JSON 報告 | 已有（僅概念估算） |
+| 多格式檔案選擇及部分圖片/PDF 預覽 | 已有（不代表解析或 3D 轉換） |
+| JPG/PNG/PDF/AI/DXF/DWG/IFC 自動轉 3D | **未完成**；需伺服器轉檔、幾何解析、比例校正、人工覆核 |
+| 牆門及障礙編輯、導航網格、動線合規規則 | **未完成** |
+| 經校準的 DES/ABM 與大量重複模擬 | **未完成**；目前僅簡化公式 |
+| 真實 AI 偵測、攝影機直播與影像調用 | **未完成** |
+| Supabase Auth 登入、雲端 CRUD 與檔案 Storage | **未完成**；提供安全的 SQL 起始結構 |
+| 角色實際授權、正式稽核與備份 | **未完成**；UI 僅展示預期角色 |
+| 正式 XLSX/PDF 引擎與 PDF 報表排版 | **未完成**；目前 JSON 匯出與瀏覽器列印 |
+
+## 模擬計算說明
+
+示範引擎使用固定公式，**不是**經驗證的實際效果：
+
+- 監測覆蓋率 = `min(92%, cameras / 12 × 65%)`；此處的 65% 僅為概念假設，**不是**幾何遮蔽與 AI 辨識的實際有效面積。
+- AI 偵測發現基準設 8 分鐘，非 AI 為 45 分鐘，並以未覆蓋比例加算示意時間。
+- 完整事件回應時間 = 發現 + 通知 + 確認 + 路程 + 處置。當前通知、確認與處置時間是 Demo 常數。
+- 工作負荷 = 18 小時每日工作需求 ÷ (人員 × 7 小時有效工時)；人力為 0 時顯示缺值。
+- 動線優化僅採用示意折減係數，**不會產生真正符合隔離／消毒規則的路徑**。
+- 所有數字須標示「示範／推估」，正式合作報告必須另行量測、校準、固定基準條件與不確定性分析。
+
+## GitHub → Vercel → Supabase（新專案流程）
 
 ### 1. GitHub
-1. 登入 https://github.com ，右上角 `+` → `New repository`。
-2. Repository name 填 `gaiabit-shelter-twin`，建議選 `Private`，按 `Create repository`。
-3. 選 `Add file` → `Upload files`，**解壓縮 ZIP 後**將這四個檔案（不是 ZIP 本身）拖到儲存庫根目錄。
-4. 按 `Commit changes`。確認 GitHub 最上層可直接看到 `index.html`，不要多一層資料夾。
+
+建立 Private repository，例如 `gaiabit-shelter-twin-admin`，直接上傳這四個檔案至儲存庫根目錄。
 
 ### 2. Vercel
-1. 登入 https://vercel.com/new ，透過 GitHub 登入並授權該儲存庫。
-2. `Import` `gaiabit-shelter-twin`。
-3. Framework Preset 選 `Other`。Root Directory 選 `./`。此版沒有 build 指令、沒有 npm 依賴，保持 Build Command 為空，Output Directory 留預設即可。
-4. 按 `Deploy`。完成後打開 Vercel 提供的 `*.vercel.app` 網址。
-5. 畫面應顯示 3D 場域與左右側資料。轉動 3D、調整右側滑桿、測試 JSON 匯入匯出。
-6. 若網站顯示 404，檢查 `index.html` 是否位於 Repository 根目錄，以及 Vercel Root Directory 是否指向同一層。
+
+New Project → Import GitHub Repository → Framework Preset **Other** → Deploy。因根目錄含 `index.html`，可部署靜態網站。**不要**覆寫原本正常的 Shelter Twin 專案，建議新建 `gaiabit-shelter-twin-admin`。
 
 ### 3. Supabase
-1. 登入 https://supabase.com/dashboard，`New project`，填名稱，例如 `gaiabit-shelter-twin`。密碼請保管好。
-2. 進入 `SQL Editor` → `New query`，貼上完整 `schema.sql`，按 `Run`。
-3. 進入 `Table Editor`，應出現 `twin_facilities`、`twin_zones`、`twin_devices`、`twin_animals`、`twin_staff_shifts`、`twin_events`、`twin_daily_metrics`、`twin_simulations`、`twin_memberships`。
-4. 已啟用 RLS：未登入者**無權**讀取以上表格。不要停用 RLS，也不要將 Supabase `service_role` / secret key 放入 `index.html` 或 `config.json`。
-5. Supabase → `Project Settings` / `API Keys` 可查看 Project URL 和 publishable key。這些僅在後續實作登入與資料 CRUD 時使用；目前原型**未連線資料庫**，不需要設定任何 Vercel 環境變數，`config.json` 中的 supabase 欄位保留空值即可。
 
-## 操作方式
-- 3D：拖曳旋轉，滾輪縮放；點擊建物可顯示區域名稱與犬貓數。
-- Overlays：切換鏡頭、人員、熱區、動線。
-- Scenario Lab：調整新增鏡頭、人力、AI 採用率、曝光倍數；下方 KPI 即時重算。
-- 匯出報告 JSON：保存目前情境結果。
-- 載入 `config.json`：從 Vercel 網址載入同目錄的場域定義，更新 3D。
-- 匯入自訂 JSON：本機選檔。瀏覽器直接用 `file://` 開啟時請用此方式，因為部分瀏覽器不允許 `fetch('./config.json')`。
-- 修改場域：可在 JSON 修改 `zones` 中每棟建築的 `x`、`z`、`width`、`depth`、`count` 等，修改後重新載入。座標是示意公尺尺度，尚未具備平面圖解析或建模功能。
+在正確的專用 Supabase Project 中開啟 SQL Editor，確認 SQL 內容後執行 `schema.sql`，建立 `twin_` 開頭的各表。資料庫內建 RLS，初期僅限場域 owner `auth.uid()` 操作。這不等於前端已接上登入和 CRUD。
 
-## 真實導入需要蒐集的資料
-1. 場域：按比例的平面圖、建築外框／走道尺寸、區域用途、障礙與門禁。
-2. 動物：各舍容量、實際犬貓數、出入舍事件、照護與醫療記錄。
-3. 人員：排班、路線、工作時間、每日巡檢和任務完成時刻。
-4. 設備：鏡頭位置／視角／在線率、感測器數值、投食器回報、網路拓樸。
-5. 成效：至少一段導入前及後的同口徑量測，例：異常從發生到被發現的時間、人工工時、觀看／詢問／預約／認養的轉換。分開記錄真實值、估計值和模型假設。
+不要將 `service_role`、`sb_secret_...`、資料庫密碼寫入 HTML、config.json 或 GitHub。建議正式系統由 Supabase Auth 驗證身分，實施依場域與功能區分之 RLS，所有稽核與高權限操作透過受控伺服器端執行。
 
-## 重要限制與接續開發
-- 目前模型使用簡化比例，不是經驗證的因果推估。滑桿產生的「節省比例」只能展示情境，不宜對外宣稱成績。
-- 目前所有 3D 建物為程式自動生成的示意方塊，不是上傳平面圖自動生成 3D；也尚無照片、影音或攝影機影像串流。
-- `schema.sql` 建立可供後續使用的資料結構，但 `index.html` 現階段尚未實作登入、讀寫 Supabase、即時訂閱。若要上線使用真實資料，需補上登入、後台欄位管理、事件上報 API、資料權限分工、前後期統計、視覺化驗證與稽核。
-- 避免以個體動物健康分數取代獸醫判斷，避免以模擬數值代替臨床與實際營運觀測。
+**注意**：目前「系統及連線」只是記錄公開 API URL 與 publishable key 的介面，**沒有真正連線功能**；UI 會明示此點，避免誤判雲端已同步。若要上線使用，下一迭代需接 Auth + REST/RPC、真實模型檔 Storage 和授權控管。
+
+## 下一階段研發優先順序
+
+1. Supabase Auth + 實際場域 CRUD、owner 成員與 RLS 驗證、多場域隔離。
+2. 原始檔私有上傳、真實圖片/PDF 預覽、轉檔工作佇列與 MIME 安全檢查。
+3. 空間編輯器：牆門、比例尺、房間閉合、通道/隔離約束、版本比較。
+4. 可靠的 2D→3D 幾何建模與人工檢查；GLB 模型轉換及分層載入。
+5. 時間獨立的 DES/ABM、任務資源與技能限制、A* 路徑引擎、事件重播與可重現結果。
+6. 真實 IoT、AI 與診斷外之行為提示、模型校準、完整報告與風險治理。
+
+## 使用限制與資料保護
+
+此程式為前端可操作原型，**不是**已驗證的智慧收容所正式管理系統，不能用作醫療診斷、實際人力裁撤或防疫規則替代品。展示資料均為合成示範，請勿匯入真實個資、醫療紀錄、私密圖面或監視影像。模型比例、動線、AI 誤報與經濟效益在現場實測之前不能視為真實成果。
